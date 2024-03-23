@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        #notebook {
+            max-width: 600px;
+            margin: auto;
+        }
+
+        input, textarea, button {
+            margin-bottom: 10px;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            overflow: hidden;
+        }
+
+        button {
+            cursor: pointer;
+        }
+
+        #noteTitle, #noteDescription {
+            width: 100%;
+            box-sizing: border-box;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        #noteTitle {
+            margin-bottom: 10px;
+        }
+    </style>
+    <title>Online Notebook</title>
+</head>
+<body>
+
+<div id="notebook">
+    <h1>Online Notebook</h1>
+
+    <label for="search">Search Notes:</label>
+    <input type="text" id="search" oninput="searchNotes()" placeholder="Search notes...">
+
+    <p>Showing Notes: <span id="showingNotes">0</span></p>
+
+    <p>Total Notes: <span id="totalNotes">0</span></p>
+
+    <label for="noteTitle">Note Title:</label>
+    <input type="text" id="noteTitle" placeholder="Enter note title...">
+
+    <label for="noteDescription">Note Description:</label>
+    <textarea id="noteDescription" placeholder="Enter note description..."></textarea>
+
+    <button onclick="addNote()">Add to Book</button>
+
+    <ul id="notesList"></ul>
+</div>
+<script>
+const baseUrl = 'https://crudcrud.com/api/4917fb3b85ca4e13be2428cc786915e3/notes';
+
+// Function to add a new note
+async function addNote() {
+    const title = document.getElementById("noteTitle").value;
+    const description = document.getElementById("noteDescription").value;
+
+    if (title.trim() === "" || description.trim() === "") {
+        alert("Please enter both title and description");
+        return;
+    }
+
+    const note = {
+        title,
+        description
+    };
+
+    // Add the new note
+    await fetch(baseUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(note)
+    });
+
+    // Clear input fields
+    document.getElementById("noteTitle").value = "";
+    document.getElementById("noteDescription").value = "";
+
+    // Refresh the notes list
+    displayNotes();
+}
+
+// Function to display notes
+async function displayNotes() {
+    const notesList = document.getElementById("notesList");
+    notesList.innerHTML = "";
+
+    // Retrieve notes
+    const response = await fetch(baseUrl);
+    const notes = await response.json();
+
+    // Update total notes count
+    document.getElementById("totalNotes").textContent = notes.length;
+
+    // Display each note
+    notes.forEach((note) => {
+        const li = document.createElement("li");
+        li.innerHTML = `<strong>${note.title}</strong><br>${note.description}
+                        <br><button onclick="deleteNote('${note._id}')">Delete</button>`;
+        notesList.appendChild(li);
+    });
+
+    // Update showing notes count
+    document.getElementById("showingNotes").textContent = notes.length;
+}
+
+// Function to delete a note
+async function deleteNote(id) {
+    // Remove the note
+    await fetch(`${baseUrl}/${id}`, {
+        method: 'DELETE'
+    });
+
+    // Refresh the notes list
+    displayNotes();
+}
+
+// Function to search notes - Inefficient to search on the client side, given we fetch all notes to display. Ideal implementation would involve backend support for search.
+async function searchNotes() {
+    const searchTerm = document.getElementById("search").value.toLowerCase();
+    const response = await fetch(baseUrl);
+    const notes = await response.json();
+
+    // Filter notes
+    const filteredNotes = notes.filter(note =>
+        note.title.toLowerCase().includes(searchTerm) || note.description.toLowerCase().includes(searchTerm)
+    );
+
+    // Display the filtered notes - Note: This reuses display logic but does not optimize for backend search.
+    displayFilteredNotes(filteredNotes);
+}
+
+// Function to display filtered notes
+function displayFilteredNotes(filteredNotes) {
+    const notesList = document.getElementById("notesList");
+    notesList.innerHTML = "";
+
+    // No need to update total notes count since it should display the total count, not the filtered count.
+
+    // Display each filtered note
+    filteredNotes.forEach((note) => {
+        const li = document.createElement("li");
+        li.innerHTML = `<strong>${note.title}</strong><br>${note.description}
+                        <br><button onclick="deleteNote('${note._id}')">Delete</button>`;
+        notesList.appendChild(li);
+    });
+
+    // Update showing notes count
+    document.getElementById("showingNotes").textContent = filteredNotes.length;
+}
+
+// Initial display of notes when the page loads
+displayNotes();
+</script>
+</body>
+</html>
